@@ -7,6 +7,7 @@ Interpretable logistic regression PD model with:
   - AUC / Gini / KS validation
   - Risk Weight Matrix (ranked standardized coefficients)
   - PD -> 300-850 score conversion (points-to-double-odds)
+  - Expected Loss = PD x LGD x EAD (illustrative LGD / EAD assumptions)
 
 Data: Kaggle "Give Me Some Credit" (cs-training.csv), saved as data/credit_data.csv
 Run:  python scorecard.py
@@ -37,6 +38,13 @@ SEED = 42
 # (wide PDO spreads borrowers across the familiar 300-850 range)
 BASE_SCORE, BASE_ODDS, PDO = 650, 20, 50
 SCORE_MIN, SCORE_MAX = 300, 850
+
+# Expected Loss = PD x LGD x EAD
+# The dataset has no balances or recoveries, so LGD and EAD use illustrative,
+# industry-typical assumptions for unsecured credit cards (clearly labelled).
+CREDIT_LIMIT = 10_000   # assumed limit per borrower ($)
+CCF = 0.50              # credit conversion factor: share of unused limit drawn before default
+LGD = 0.80              # share of exposure lost after default (unsecured cards ~75-85%)
 
 PAST_DUE_COLS = [
     "NumberOfTime30-59DaysPastDueNotWorse",
@@ -133,6 +141,7 @@ line()
 print(f"  AUC  : {auc:.3f}")
 print(f"  Gini : {2 * auc - 1:.3f}   (2 x AUC - 1)")
 print(f"  KS   : {ks:.3f}   (max separation of good vs bad)")
+print(f"  Calibration: predicted PD {pd_test.mean():.2%} vs actual default rate {y_test.mean():.2%}")
 
 # ---------------------------------------------------------------------------
 # Step 5 - Risk Weight Matrix
@@ -193,6 +202,49 @@ line("-")
 print("A working scorecard shows default rates falling as scores rise.")
 
 # ---------------------------------------------------------------------------
+# Expected Loss: EL = PD x LGD x EAD  (2-year horizon, matching the target)
+# EAD = drawn balance + CCF x unused limit
+# ---------------------------------------------------------------------------
+utilization = X_test["RevolvingUtilizationOfUnsecuredLines"].clip(0, 1).values
+drawn = utilization * CREDIT_LIMIT
+ead = drawn + CCF * (CREDIT_LIMIT - drawn)
+expected_loss = pd_test * LGD * ead
+
+el_table = (
+    pd.DataFrame({"Band": bands, "EAD": ead, "EL": expected_loss})
+    .groupby("Band", observed=False)
+    .agg(Borrowers=("EL", "count"), Total_EAD=("EAD", "sum"),
+         Total_EL=("EL", "sum"), Avg_EL=("EL", "mean"))
+)
+total_ead, total_el = ead.sum(), expected_loss.sum()
+
+print()
+line()
+print("EXPECTED LOSS (hold-out portfolio)  |  EL = PD x LGD x EAD")
+line()
+print(f"Assumptions: ${CREDIT_LIMIT:,} limit per borrower, CCF {CCF:.0%}, LGD {LGD:.0%}")
+print(f"{'Score band':<16}{'Exposure':>14}{'Expected loss':>16}{'Avg EL':>10}{'Loss rate':>11}")
+line("-")
+for band, r in el_table.iterrows():
+    if not r["Borrowers"]:
+        continue
+    print(f"{band:<16}{r['Total_EAD']:>14,.0f}{r['Total_EL']:>16,.0f}"
+          f"{r['Avg_EL']:>10,.0f}{r['Total_EL'] / r['Total_EAD']:>11.2%}")
+line("-")
+print(f"{'Portfolio':<16}{total_ead:>14,.0f}{total_el:>16,.0f}"
+      f"{total_el / len(ead):>10,.0f}{total_el / total_ead:>11.2%}")
+poor_share = el_table.loc["Poor 300-579", "Total_EL"] / total_el
+print(f"\nThe Poor band holds {(bands == 'Poor 300-579').mean():.0%} of borrowers "
+      f"but {poor_share:.0%} of expected loss.")
+
+# Worked example: one high-risk and one low-risk borrower from the hold-out set
+hi, lo = int(np.argmax(pd_test)), int(np.argmin(pd_test))
+print("\nWorked examples:")
+for label, i in [("Highest-risk borrower", hi), ("Lowest-risk borrower", lo)]:
+    print(f"  {label}: score {scores[i]:.0f} | PD {pd_test[i]:.1%} x LGD {LGD:.0%} x "
+          f"EAD ${ead[i]:,.0f} = EL ${expected_loss[i]:,.0f}")
+
+# ---------------------------------------------------------------------------
 # Save everything needed to score a new applicant
 # ---------------------------------------------------------------------------
 with open(MODEL_FILE, "wb") as f:
@@ -201,6 +253,7 @@ with open(MODEL_FILE, "wb") as f:
         "caps": caps,
         "features": list(X.columns),
         "score_params": {"base_score": BASE_SCORE, "base_odds": BASE_ODDS, "pdo": PDO},
+        "el_assumptions": {"credit_limit": CREDIT_LIMIT, "ccf": CCF, "lgd": LGD},
         "metrics": {"auc": auc, "gini": 2 * auc - 1, "ks": ks},
     }, f)
 matrix.to_csv(MATRIX_FILE, index=False)

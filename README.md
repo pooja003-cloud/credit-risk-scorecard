@@ -1,6 +1,6 @@
 # Credit Risk Scorecard — Interpretable Logistic Regression
 
-A traditional bank-style credit scorecard that predicts the probability of serious delinquency (90+ days past due within two years) and converts it to a 300–850 credit score. The model is built for **transparency**: every feature's effect on risk is visible, ranked and explainable, the way regulated lenders need it to be.
+A traditional bank-style credit scorecard that predicts the probability of serious delinquency (90+ days past due within two years), converts it to a 300–850 credit score, and estimates the portfolio's expected credit loss. The model is built for **transparency**: every feature's effect on risk is visible, ranked and explainable, the way regulated lenders need it to be.
 
 ## Why logistic regression?
 
@@ -13,6 +13,7 @@ Banks must be able to explain their credit decisions — to model validators und
 | AUC | **0.858** | 86% chance a random defaulter is scored riskier than a random non-defaulter |
 | Gini | **0.717** | 2 × AUC − 1, the standard industry ranking measure |
 | KS | **0.557** | Maximum separation between good and bad borrowers |
+| Calibration | **6.65% vs 6.68%** | Average predicted PD vs actual default rate, so the PDs are accurate in level, not just in ranking |
 
 ### Risk Weight Matrix
 
@@ -49,26 +50,53 @@ Scores use the industry "points to double the odds" method: 650 points = 20:1 go
 
 Default rates fall steadily as scores rise, from about 31% in the lowest band to under 1% in the top bands, which is what a working scorecard should show.
 
+### Expected loss
+
+Banks measure credit losses with **Expected Loss = PD × LGD × EAD**: the probability of default, the share of the exposure lost if default happens, and the amount owed at default. This model supplies the PD. The dataset has no balances or recovery data, so LGD and EAD use illustrative, industry-typical assumptions for unsecured credit cards:
+
+- **Credit limit:** $10,000 per borrower (assumed)
+- **EAD** = drawn balance + 50% of the unused limit (a 50% credit conversion factor, since borrowers tend to draw down their lines before defaulting)
+- **LGD:** 80% (unsecured cards typically lose 75–85% after default)
+
+| Score band | Exposure ($) | Expected loss ($) | Avg EL per borrower ($) | Loss rate |
+|---|---|---|---|---|
+| Poor (300–579) | 35,992,577 | 8,449,610 | 2,184 | 23.48% |
+| Fair (580–669) | 61,425,061 | 3,421,154 | 440 | 5.57% |
+| Good (670–739) | 70,147,683 | 1,299,861 | 105 | 1.85% |
+| Very Good (740–799) | 30,596,644 | 273,324 | 46 | 0.89% |
+| Exceptional (800–850) | 143,209 | 614 | 22 | 0.43% |
+| **Portfolio** | **198,305,174** | **13,444,563** | **448** | **6.78%** |
+
+**Key takeaway:** the Poor band holds 13% of borrowers but 63% of expected loss. That is the kind of concentration a bank acts on through approval cut-offs, credit limits and pricing.
+
+Worked examples from the hold-out set:
+
+- **Highest-risk borrower:** score 300 · PD 96.9% × LGD 80% × EAD $10,000 = **EL $7,753**
+- **Lowest-risk borrower:** score 840 · PD 0.4% × LGD 80% × EAD $5,000 = **EL $14**
+
+The loss figures cover the same two-year horizon as the default target. They show how a PD model plugs into loss estimation; the dollar amounts depend on the assumptions above.
+
 ## Method
 
 1. **Clean** — load the data; treat the 96/98 codes in the past-due counts as missing (they are data-entry codes, not real counts).
 2. **Split first** — stratified 80/20 train/test split *before* any fitting, so nothing from the test set leaks into training.
 3. **Cap outliers** — clip each feature at the training set's 1st and 99th percentiles.
 4. **Impute + scale + model** — median imputation, standardization and logistic regression, all in one scikit-learn `Pipeline` fitted on training data only.
-5. **Validate** — AUC, Gini and KS on the hold-out set (accuracy is misleading when only ~7% of borrowers default).
+5. **Validate** — AUC, Gini and KS on the hold-out set (accuracy is misleading when only ~7% of borrowers default), plus a calibration check of predicted vs actual default rate.
 6. **Explain** — rank standardized coefficients into the Risk Weight Matrix.
 7. **Score** — convert probability of default to a 300–850 score and check default rates by band.
+8. **Estimate losses** — combine PD with assumed LGD and EAD to calculate expected loss by score band and for the whole portfolio.
 
 ## Project structure
 
 ```
 credit-risk-scorecard/
-├── scorecard.py           # full pipeline: clean → train → validate → explain → score
+├── scorecard.py           # full pipeline: clean → train → validate → explain → score → expected loss
 ├── requirements.txt
 ├── data/                   # place credit_data.csv here (not tracked)
 └── outputs/
     ├── risk_weight_matrix.csv
-    ├── scorecard_model.pkl  # pipeline + outlier caps + score settings
+    ├── scorecard_model.pkl  # pipeline + outlier caps + score and loss settings
     └── run_output.txt      # full console output of the latest run
 ```
 
@@ -90,6 +118,7 @@ The dataset is not included in this repository, in line with Kaggle's competitio
 - **Debt ratio sign.** In this dataset, debt ratio becomes extremely large when monthly income is missing, which distorts its relationship with default and produces a slightly negative weight. A production model would treat that case separately.
 - **Linear effects only.** Features enter the model as straight lines. A production scorecard would use Weight of Evidence (WoE) binning with monotonic constraints to capture non-linear risk patterns while staying interpretable.
 - **Reason codes.** Adding per-applicant reason codes (the top features pushing an individual's score down) would support adverse action notices.
+- **Real LGD and EAD models.** With account-level balance, limit and recovery data, LGD and EAD would be modelled per borrower instead of assumed.
 - **Monitoring.** Population Stability Index (PSI) tracking would detect when incoming applicants drift from the training population.
 
 ## Data

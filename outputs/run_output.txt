@@ -17,6 +17,7 @@ MODEL VALIDATION (20% hold-out)
   AUC  : 0.858
   Gini : 0.717   (2 x AUC - 1)
   KS   : 0.557   (max separation of good vs bad)
+  Calibration: predicted PD 6.65% vs actual default rate 6.68%
 
 ========================================================================
 RISK WEIGHT MATRIX (standardized coefficients, ranked by impact)
@@ -48,5 +49,25 @@ V.Good 740-799        5,911    19.7%          0.52%
 Excep 800-850            28     0.1%          0.00%
 ------------------------------------------------------------------------
 A working scorecard shows default rates falling as scores rise.
+
+========================================================================
+EXPECTED LOSS (hold-out portfolio)  |  EL = PD x LGD x EAD
+========================================================================
+Assumptions: $10,000 limit per borrower, CCF 50%, LGD 80%
+Score band            Exposure   Expected loss    Avg EL  Loss rate
+------------------------------------------------------------------------
+Poor 300-579        35,992,577       8,449,610     2,184     23.48%
+Fair 580-669        61,425,061       3,421,154       440      5.57%
+Good 670-739        70,147,683       1,299,861       105      1.85%
+V.Good 740-799      30,596,644         273,324        46      0.89%
+Excep 800-850          143,209             614        22      0.43%
+------------------------------------------------------------------------
+Portfolio          198,305,174      13,444,563       448      6.78%
+
+The Poor band holds 13% of borrowers but 63% of expected loss.
+
+Worked examples:
+  Highest-risk borrower: score 300 | PD 96.9% x LGD 80% x EAD $10,000 = EL $7,753
+  Lowest-risk borrower: score 840 | PD 0.4% x LGD 80% x EAD $5,000 = EL $14
 
 Saved: outputs/scorecard_model.pkl (pipeline + caps + score settings), outputs/risk_weight_matrix.csv
