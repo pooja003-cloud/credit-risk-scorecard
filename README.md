@@ -2,15 +2,23 @@
 
 Banks must predict which borrowers will default, and they must explain every decision, to regulators and to customers they decline.
 
-**What I set out to do.** Build a default-prediction model the way a bank would: accurate, but fully explainable.
+## Why this project
 
-**What I did**
+Before my master's, I monitored a ~$400M retail lending portfolio: delinquency migration, roll rates and early warning signs. I could see when borrowers started to fall behind, but the models that decided who got credit in the first place sat upstream of my role. So I built one myself as my individual project for my MS in Quantitative Finance, and rebuilt it here as the foundation for two follow-up projects.
+
+## What I set out to do
+
+Build a default-prediction model the way a bank would: accurate, but fully explainable.
+
+## What I did
+
 - Built a logistic regression scorecard on 150,000 real borrowers, with one clear weight per factor
 - Fixed data problems that would quietly mislead the model, such as late-payment counts recorded as 96 or 98 (those borrowers default at 54.6%, about 8× average)
 - Converted predictions into a 300–850 credit score, expected-loss estimates and reason codes for declined applicants
 - Removed a feature whose effect couldn't be honestly explained to an applicant
 
-**Results**
+## Results
+
 - **AUC 0.861** on 30,000 unseen borrowers
 - **Credit utilization is the biggest risk driver**, roughly doubling the odds of default per standard deviation, far ahead of income
 - **The lowest score band holds 12% of borrowers but 62% of expected loss**
@@ -18,8 +26,14 @@ Banks must predict which borrowers will default, and they must explain every dec
 
 <p align="center"><img src="outputs/roc_curve.png" width="55%" alt="ROC curve, AUC 0.861"></p>
 
-**How it connects.** I first developed this scorecard as my individual project for my MS in Quantitative Finance, then rebuilt it here as the baseline for my [lending strategy](https://github.com/pooja003-cloud/credit-lending-strategy) project, which challenges it with XGBoost, and my [validation](https://github.com/pooja003-cloud/credit-model-validation) project, which reviews both.
+## How it connects
 
-**Run it.** Download `cs-training.csv` from [Kaggle's Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/data), save it as `data/credit_data.csv`, then run `pip install -r requirements.txt` and `python scorecard.py`.
+This is the baseline for my [lending strategy](https://github.com/pooja003-cloud/credit-lending-strategy) project, which challenges it with XGBoost, and my [validation](https://github.com/pooja003-cloud/credit-model-validation) project, which reviews both.
 
-**Full details:** methods, all tables and limitations are in [REPORT.md](REPORT.md).
+## Run it
+
+Download `cs-training.csv` from [Kaggle's Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/data), save it as `data/credit_data.csv`, then run `pip install -r requirements.txt` and `python scorecard.py`.
+
+## Full details
+
+Methods, all tables and limitations are in [REPORT.md](REPORT.md).
