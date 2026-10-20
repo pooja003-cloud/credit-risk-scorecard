@@ -50,16 +50,16 @@ PAST_DUE_COLS = [
 FLAG_COLS = ["PastDueCodeFlag", "IncomeMissingFlag"]
 
 # Debt ratio raises risk on its own, but its weight turns slightly negative once the
-# other debt features are in the model. A reason like "debt ratio too low" can't be
-# given to a declined applicant, so it is never used as a reason code.
-NO_REASON_CODE = {"DebtRatio"}
+# other debt features are in the model, and it adds no accuracy (AUC 0.860 with it,
+# 0.861 without). Every feature in the model must be one we'd show an applicant as a
+# reason, so it is left out rather than kept and hidden.
+DROPPED = ["DebtRatio"]
 
 # Plain-English names, used in reason codes
 LABELS = {
     "RevolvingUtilizationOfUnsecuredLines": "Revolving credit utilization",
     "age": "Age",
     "NumberOfTime30-59DaysPastDueNotWorse": "Payments 30-59 days late",
-    "DebtRatio": "Debt ratio",
     "MonthlyIncome": "Monthly income",
     "NumberOfOpenCreditLinesAndLoans": "Open credit lines and loans",
     "NumberOfTimes90DaysLate": "Payments 90+ days late",
@@ -87,7 +87,7 @@ def clean(data):
     data["PastDueCodeFlag"] = (data[PAST_DUE_COLS] >= 96).any(axis=1).astype(int)
     for col in PAST_DUE_COLS:
         data.loc[data[col] >= 96, col] = np.nan
-    # Missing income is informative too, and it is what distorts DebtRatio
+    # Missing income is flagged so the model can tell it apart from a typical income
     data["IncomeMissingFlag"] = data["MonthlyIncome"].isna().astype(int)
     return data
 
@@ -114,18 +114,17 @@ def reason_codes(pipeline, X_row, n=3):
         if contrib[i] <= 0 or len(reasons) == n:
             break
         feat = X_row.columns[i]
-        if feat in NO_REASON_CODE:
-            continue
         if feat in FLAG_COLS:
-            reasons.append(LABELS[feat])
+            if X_row.iloc[0, i] == 1:            # a flag is only a factor when it is set
+                reasons.append(LABELS[feat])
         else:
             reasons.append(f"{LABELS[feat]}: {'higher' if z[i] > 0 else 'lower'} than average")
     return reasons
 
 
 def score_applicant(applicant, bundle=None):
-    """Score one applicant (a dict of the 10 raw dataset fields; leave unknowns as None).
-    Returns score, PD and up to three reason codes."""
+    """Score one applicant (a dict of the raw dataset fields; leave unknowns as None).
+    Returns score, PD and up to three risk factors - the reason codes if declined."""
     if bundle is None:
         with open(MODEL_FILE, "rb") as f:
             bundle = pickle.load(f)
@@ -133,7 +132,7 @@ def score_applicant(applicant, bundle=None):
     X_row = apply_caps(clean(raw), bundle["caps"])[bundle["features"]]
     p = float(bundle["pipeline"].predict_proba(X_row)[0, 1])
     return {"score": int(pd_to_score(p)), "pd": p,
-            "reasons": reason_codes(bundle["pipeline"], X_row)}
+            "factors": reason_codes(bundle["pipeline"], X_row)}
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +153,7 @@ def main():
 
     # Step 1 - Data ingestion and cleaning ----------------------------------
     df = clean(pd.read_csv(DATA_FILE))
-    X = df.drop(columns=[TARGET])
+    X = df.drop(columns=[TARGET] + DROPPED)
     y = df[TARGET]
 
     line()
@@ -325,26 +324,27 @@ def main():
     # Scoring new applicants with reason codes ------------------------------
     examples = {
         "Maria": {"RevolvingUtilizationOfUnsecuredLines": 0.95, "age": 28,
-                  "NumberOfTime30-59DaysPastDueNotWorse": 3, "DebtRatio": 0.40,
+                  "NumberOfTime30-59DaysPastDueNotWorse": 3,
                   "MonthlyIncome": 6000, "NumberOfOpenCreditLinesAndLoans": 8,
                   "NumberOfTimes90DaysLate": 0, "NumberRealEstateLoansOrLines": 0,
                   "NumberOfTime60-89DaysPastDueNotWorse": 0, "NumberOfDependents": 0},
         "James": {"RevolvingUtilizationOfUnsecuredLines": 0.10, "age": 52,
-                  "NumberOfTime30-59DaysPastDueNotWorse": 0, "DebtRatio": 0.30,
+                  "NumberOfTime30-59DaysPastDueNotWorse": 0,
                   "MonthlyIncome": 4500, "NumberOfOpenCreditLinesAndLoans": 6,
                   "NumberOfTimes90DaysLate": 0, "NumberRealEstateLoansOrLines": 1,
                   "NumberOfTime60-89DaysPastDueNotWorse": 0, "NumberOfDependents": 2},
     }
     print()
     line()
-    print("SCORING NEW APPLICANTS (score_applicant) - with adverse action reason codes")
+    print("SCORING NEW APPLICANTS (score_applicant)")
+    print("Risk factors = what pushes risk above average; if declined, these are the reason codes")
     line()
     for name, applicant in examples.items():
         result = score_applicant(applicant, bundle)
         print(f"{name}: score {result['score']} | PD {result['pd']:.1%}")
-        for k, reason in enumerate(result["reasons"], 1):
-            print(f"   Reason {k}: {reason}")
-        if not result["reasons"]:
+        for k, factor in enumerate(result["factors"], 1):
+            print(f"   Risk factor {k}: {factor}")
+        if not result["factors"]:
             print("   No factors raise risk above the average borrower")
 
     # Charts ----------------------------------------------------------------

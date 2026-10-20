@@ -1,7 +1,7 @@
 ============================================================================
 CREDIT RISK SCORECARD - LOGISTIC REGRESSION
 ============================================================================
-Borrowers: 150,000 | Features: 12 | Default rate: 6.68%
+Borrowers: 150,000 | Features: 11 | Default rate: 6.68%
 Missing values (flagged where informative, then filled with training-set median):
   MonthlyIncome                               19.8%
   NumberOfDependents                           2.6%
@@ -16,25 +16,25 @@ Highly correlated feature pairs (|r| > 0.7): 0
 ============================================================================
 MODEL VALIDATION (20% hold-out)
 ============================================================================
-  AUC  : 0.860
+  AUC  : 0.861
   Gini : 0.721   (2 x AUC - 1)
-  KS   : 0.560   (max separation of good vs bad)
+  KS   : 0.557   (max separation of good vs bad)
 
 ============================================================================
 CALIBRATION BY DECILE (1 = safest 10%, 10 = riskiest 10%)
 ============================================================================
 Decile    Borrowers   Predicted PD   Actual rate   Pred / Actual
 ----------------------------------------------------------------------------
-1             3,000          0.94%         0.33%            2.83
-2             3,000          1.29%         0.70%            1.84
-3             3,000          1.60%         0.73%            2.18
-4             3,000          1.94%         1.57%            1.24
-5             3,000          2.37%         1.77%            1.34
-6             3,000          3.03%         2.50%            1.21
-7             3,000          4.24%         4.83%            0.88
-8             3,000          6.41%         6.87%            0.93
-9             3,000         10.38%        11.27%            0.92
-10            3,000         34.33%        36.27%            0.95
+1             3,000          0.93%         0.37%            2.54
+2             3,000          1.29%         0.53%            2.42
+3             3,000          1.61%         0.80%            2.01
+4             3,000          1.96%         1.50%            1.31
+5             3,000          2.38%         1.83%            1.30
+6             3,000          3.04%         2.73%            1.11
+7             3,000          4.24%         4.63%            0.92
+8             3,000          6.43%         7.03%            0.91
+9             3,000         10.36%        11.00%            0.94
+10            3,000         34.26%        36.40%            0.94
 ----------------------------------------------------------------------------
 All          30,000          6.65%         6.68%
 Pred / Actual above 1 = model overstates risk; below 1 = understates it.
@@ -44,18 +44,17 @@ RISK WEIGHT MATRIX (standardized coefficients, ranked by impact)
 ============================================================================
 Rank Feature                                       Coef   Odds x  Direction
 ----------------------------------------------------------------------------
-1    RevolvingUtilizationOfUnsecuredLines        +0.689     1.99  RAISES risk
-2    NumberOfTimes90DaysLate                     +0.333     1.39  RAISES risk
-3    NumberOfTime30-59DaysPastDueNotWorse        +0.308     1.36  RAISES risk
-4    age                                         -0.248     0.78  lowers risk
-5    NumberOfTime60-89DaysPastDueNotWorse        +0.202     1.22  RAISES risk
-6    NumberOfOpenCreditLinesAndLoans             +0.186     1.20  RAISES risk
-7    MonthlyIncome                               -0.154     0.86  lowers risk
-8    DebtRatio                                   -0.135     0.87  lowers risk
-9    NumberRealEstateLoansOrLines                +0.129     1.14  RAISES risk
-10   PastDueCodeFlag                             +0.100     1.10  RAISES risk
-11   IncomeMissingFlag                           +0.087     1.09  RAISES risk
-12   NumberOfDependents                          +0.047     1.05  RAISES risk
+1    RevolvingUtilizationOfUnsecuredLines        +0.686     1.99  RAISES risk
+2    NumberOfTimes90DaysLate                     +0.333     1.40  RAISES risk
+3    NumberOfTime30-59DaysPastDueNotWorse        +0.307     1.36  RAISES risk
+4    age                                         -0.247     0.78  lowers risk
+5    NumberOfTime60-89DaysPastDueNotWorse        +0.203     1.22  RAISES risk
+6    NumberOfOpenCreditLinesAndLoans             +0.170     1.19  RAISES risk
+7    MonthlyIncome                               -0.132     0.88  lowers risk
+8    NumberRealEstateLoansOrLines                +0.104     1.11  RAISES risk
+9    PastDueCodeFlag                             +0.103     1.11  RAISES risk
+10   NumberOfDependents                          +0.042     1.04  RAISES risk
+11   IncomeMissingFlag                           -0.012     0.99  lowers risk
 ----------------------------------------------------------------------------
 Odds x = how default odds multiply for a 1 standard-deviation increase.
 
@@ -64,11 +63,11 @@ CREDIT SCORE BANDS (hold-out) | 650 pts = 20:1 odds, +50 pts doubles odds
 ============================================================================
 Score band        Borrowers    Share   Predicted PD   Default rate
 ----------------------------------------------------------------------------
-Poor 300-579          3,721    12.4%         30.11%         32.20%
-Fair 580-669          7,876    26.3%          6.68%          7.19%
-Good 670-739         12,532    41.8%          2.27%          1.70%
-V.Good 740-799        5,805    19.4%          1.12%          0.48%
-Excep 800-850            66     0.2%          0.55%          0.00%
+Poor 300-579          3,679    12.3%         30.25%         32.16%
+Fair 580-669          7,936    26.5%          6.71%          7.32%
+Good 670-739         12,575    41.9%          2.28%          1.71%
+V.Good 740-799        5,767    19.2%          1.10%          0.45%
+Excep 800-850            43     0.1%          0.56%          0.00%
 ----------------------------------------------------------------------------
 
 ============================================================================
@@ -77,26 +76,27 @@ EXPECTED LOSS (hold-out portfolio)  |  EL = PD x LGD x EAD
 Assumptions: $10,000 limit per borrower, CCF 50%, LGD 80%
 Score band            Exposure   Expected loss    Avg EL  Loss rate
 ----------------------------------------------------------------------------
-Poor 300-579        34,506,295       8,420,199     2,263     24.40%
-Fair 580-669        62,455,649       3,457,903       439      5.54%
-Good 670-739        70,918,757       1,309,279       104      1.85%
-V.Good 740-799      30,085,875         268,964        46      0.89%
-Excep 800-850          338,596           1,482        22      0.44%
+Poor 300-579        34,113,709       8,363,879     2,273     24.52%
+Fair 580-669        63,098,569       3,508,309       442      5.56%
+Good 670-739        71,016,906       1,315,415       105      1.85%
+V.Good 740-799      29,856,977         264,247        46      0.89%
+Excep 800-850          219,013             988        23      0.45%
 ----------------------------------------------------------------------------
-Portfolio          198,305,174      13,457,827       449      6.79%
+Portfolio          198,305,174      13,452,838       448      6.78%
 
-The Poor band holds 12% of borrowers but 63% of expected loss.
+The Poor band holds 12% of borrowers but 62% of expected loss.
 
 ============================================================================
-SCORING NEW APPLICANTS (score_applicant) - with adverse action reason codes
+SCORING NEW APPLICANTS (score_applicant)
+Risk factors = what pushes risk above average; if declined, these are the reason codes
 ============================================================================
-Maria: score 472 | PD 37.3%
-   Reason 1: Payments 30-59 days late: higher than average
-   Reason 2: Revolving credit utilization: higher than average
-   Reason 3: Age: lower than average
+Maria: score 470 | PD 37.8%
+   Risk factor 1: Payments 30-59 days late: higher than average
+   Risk factor 2: Revolving credit utilization: higher than average
+   Risk factor 3: Age: lower than average
 James: score 717 | PD 1.9%
-   Reason 1: Monthly income: lower than average
-   Reason 2: Number of dependents: higher than average
-   Reason 3: Age: lower than average
+   Risk factor 1: Monthly income: lower than average
+   Risk factor 2: Number of dependents: higher than average
+   Risk factor 3: Age: lower than average
 
 Saved to outputs/: scorecard_model.pkl, risk_weight_matrix.csv, roc_curve.png, calibration.png
