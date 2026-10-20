@@ -6,7 +6,7 @@ A traditional bank-style credit scorecard that predicts the probability of serio
 
 ## Why logistic regression?
 
-Banks must be able to explain their credit decisions — to model validators under model-risk guidance (such as the Fed's SR 11-7), and to customers through adverse action notices (ECOA / Regulation B). A logistic regression gives one clear, signed weight per feature, so you can say exactly what drives a borrower's risk up or down. That makes it the standard baseline for retail credit scoring.
+Banks must be able to explain their credit decisions — to model validators under model risk guidance (the Fed's SR 11-7, replaced in April 2026 by [SR 26-2](https://www.federalreserve.gov/supervisionreg/srletters/SR2602.htm)), and to customers through adverse action notices (ECOA / Regulation B). A logistic regression gives one clear, signed weight per feature, so you can say exactly what drives a borrower's risk up or down. That makes it the standard baseline for retail credit scoring.
 
 The design rule throughout: **every feature in the model must be one a lender would be willing to show an applicant as a reason.**
 
