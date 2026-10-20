@@ -1,0 +1,14 @@
+# Data (Kaggle rules: do not redistribute)
+data/
+*.csv
+!outputs/risk_weight_matrix.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

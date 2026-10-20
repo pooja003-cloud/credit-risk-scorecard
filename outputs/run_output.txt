@@ -1,0 +1,52 @@
+========================================================================
+CREDIT RISK SCORECARD - LOGISTIC REGRESSION
+========================================================================
+Borrowers: 150,000 | Features: 10 | Default rate: 6.68%
+Missing values (filled with training-set median):
+  MonthlyIncome                               19.8%
+  NumberOfDependents                           2.6%
+  NumberOfTime30-59DaysPastDueNotWorse         0.2%
+  NumberOfTimes90DaysLate                      0.2%
+  NumberOfTime60-89DaysPastDueNotWorse         0.2%
+
+Highly correlated feature pairs (|r| > 0.7): 0
+
+========================================================================
+MODEL VALIDATION (20% hold-out)
+========================================================================
+  AUC  : 0.858
+  Gini : 0.717   (2 x AUC - 1)
+  KS   : 0.557   (max separation of good vs bad)
+
+========================================================================
+RISK WEIGHT MATRIX (standardized coefficients, ranked by impact)
+========================================================================
+Rank Feature                                       Coef   Odds x  Direction
+------------------------------------------------------------------------
+1    RevolvingUtilizationOfUnsecuredLines        +0.701     2.02  RAISES risk
+2    NumberOfTimes90DaysLate                     +0.325     1.38  RAISES risk
+3    NumberOfTime30-59DaysPastDueNotWorse        +0.303     1.35  RAISES risk
+4    age                                         -0.252     0.78  lowers risk
+5    NumberOfTime60-89DaysPastDueNotWorse        +0.200     1.22  RAISES risk
+6    NumberOfOpenCreditLinesAndLoans             +0.153     1.17  RAISES risk
+7    MonthlyIncome                               -0.139     0.87  lowers risk
+8    NumberRealEstateLoansOrLines                +0.117     1.12  RAISES risk
+9    DebtRatio                                   -0.078     0.93  lowers risk
+10   NumberOfDependents                          +0.030     1.03  RAISES risk
+------------------------------------------------------------------------
+Odds x = how default odds multiply for a 1 standard-deviation increase.
+
+========================================================================
+CREDIT SCORE BANDS (hold-out) | 650 pts = 20:1 odds, +50 pts doubles odds
+========================================================================
+Score band        Borrowers    Share   Default rate
+------------------------------------------------------------------------
+Poor 300-579          3,868    12.9%         30.53%
+Fair 580-669          7,771    25.9%          7.46%
+Good 670-739         12,422    41.4%          1.71%
+V.Good 740-799        5,911    19.7%          0.52%
+Excep 800-850            28     0.1%          0.00%
+------------------------------------------------------------------------
+A working scorecard shows default rates falling as scores rise.
+
+Saved: outputs/scorecard_model.pkl (pipeline + caps + score settings), outputs/risk_weight_matrix.csv
