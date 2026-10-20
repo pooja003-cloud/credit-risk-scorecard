@@ -18,7 +18,7 @@ Banks must predict which borrowers will default, and they must explain every dec
 
 <p align="center"><img src="outputs/roc_curve.png" width="55%" alt="ROC curve, AUC 0.861"></p>
 
-**How it connects.** This is the baseline for my [lending strategy](https://github.com/pooja003-cloud/credit-lending-strategy) project, which challenges it with XGBoost, and my [validation](https://github.com/pooja003-cloud/credit-model-validation) project, which reviews both.
+**How it connects.** I first developed this scorecard as my individual project for my MS in Quantitative Finance, then rebuilt it here as the baseline for my [lending strategy](https://github.com/pooja003-cloud/credit-lending-strategy) project, which challenges it with XGBoost, and my [validation](https://github.com/pooja003-cloud/credit-model-validation) project, which reviews both.
 
 **Run it.** Download `cs-training.csv` from [Kaggle's Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/data), save it as `data/credit_data.csv`, then run `pip install -r requirements.txt` and `python scorecard.py`.
 
